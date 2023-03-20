@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimum Ship Routing</title>
+    <link rel="stylesheet" href="index.css" />
+    <script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"></script>
+</head>
+
+<body>
+    <div><canvas id="mycanvas" style="display: none;"></canvas></div>
+    <div id="map" class="map"></div>
+    <button onclick="main()">run</button>
+
+    <script src="OSR.js"></script>
+    <script src="leaflet.mapCorrection.js"></script>
+    <script src="BaseMap.js"></script>
+    <script>
+
+
+        // 目标函数：计算路径的总航程
+        function calculateTotalDistance(route) {
+            let totalDistance = 0;
+            for (let i = 0; i < route.length - 1; i++) {
+                const lat1 = route[i][0];
+                const lon1 = route[i][1];
+                const lat2 = route[i + 1][0];
+                const lon2 = route[i + 1][1];
+                totalDistance += calculateDistance(lat1, lon1, lat2, lon2);
+            }
+            return totalDistance;
+        }
+        // 计算两个经纬度之间的大圆距离（单位：千米）
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // 地球半径
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) *
+                Math.cos(deg2rad(lat2)) *
+                Math.sin(dLon / 2) *
+                Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
+            return distance;
+        }
+        // 将角度转换为弧度
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+
+
+        // 随机扰动
+        function newS(currentSolution, temperature) {
+            const newSolution = currentSolution.slice();
+            const index1 = Math.floor(Math.random() * (newSolution.length - 2)) + 1;
+            var lat = newSolution[index1][0];
+            var lng = newSolution[index1][1];
+            // var newlat = lat + (Math.random() * 2 - 1) * (temperature / initialTemperature) * 2;
+            var newlat = lat + (Math.random() * 2 - 1) * 0.1;
+            // var newlng = lng + (Math.random() * 2 - 1) * 0.1;
+            var newlng = lng;
+            newSolution[index1] = [newlat, newlng];
+            return newSolution
+        }
+
+        // 模拟退火算法
+        //最小温度和停止温度，以及迭代次数
+        function simulatedAnnealing(initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations) {
+            let currentSolution = initialSolution;
+            let currentDistance = calculateTotalDistance(currentSolution);
+            let bestSolution = currentSolution;
+            let bestDistance = currentDistance;
+            let temperature = initialTemperature;
+            let i = 0;
+
+            while (temperature > stoppingTemperature) {
+                // while (temperature > stoppingTemperature && i < iterations) {
+                const newSolution = newS(currentSolution, temperature);
+                const newDistance = calculateTotalDistance(newSolution);
+                const delta = newDistance - currentDistance;
+                if (delta < 0 || Math.exp(-delta / temperature) > Math.random()) {
+                    currentSolution = newSolution;
+                    currentDistance = newDistance;
+                    if (currentDistance < bestDistance) {
+                        bestSolution = currentSolution;
+                        bestDistance = currentDistance;
+                    }
+                }
+                temperature *= coolingRate;
+                i++;
+                // if (temperature < minTemperature) {
+                //     temperature = initialTemperature;
+                // }
+            }
+            return {
+                bestSolution: bestSolution,
+                times: i
+            };
+        }
+
+        // 航海路线优化示例
+        const initialSolution = [
+            [30.98013959225812, 121.84345224906326],
+            [29.76091751607852, 139.98294345272954],
+            [31.30221600466741, 156.83711720029146],
+            [34.75671842530883, 172.65686961196872],
+            [36.31545210684878, 186.75115157735843],
+            [41.17652169497012, 205.38160120540778],
+            [42.17857915710922, 220.41807385318646],
+            [35.04976299214142, 239.01294591367804]
+        ];
+        var polyline0 = L.polyline(initialSolution, { color: 'red' }).addTo(map);
+        const initialTemperature = 1000;
+        const coolingRate = 0.9999;
+        const minTemperature = 1;
+        const stoppingTemperature = 0.01;
+        const iterations = 10000000;
+
+        function main() {
+            const optimizedSolution = simulatedAnnealing(initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations);
+            console.log("初始解:", initialSolution);
+            console.log("优化后迭代次数:", optimizedSolution.times);
+            console.log("优化后的解:", optimizedSolution.bestSolution);
+            console.log("优化后的总航程:", calculateTotalDistance(optimizedSolution.bestSolution));
+
+
+            var polyline1 = L.polyline(optimizedSolution.bestSolution, { color: 'yellow' }).addTo(map);
+            // zoom the map to the polyline
+            map.fitBounds(polyline0.getBounds());
+        }
+
+
+        // function convertToGeoJSON(coord) {
+        //     const featureCollection = {
+        //         type: "FeatureCollection",
+        //         features: [
+        //             {
+        //                 type: "Feature",
+        //                 properties: {},
+        //                 geometry: {
+        //                     type: "LineString",
+        //                     coordinates: []
+        //                 }
+        //             }
+        //         ]
+        //     };
+        //     for (let i = 0; i < coord.length; i++) {
+        //         featureCollection.features[0].geometry.coordinates.push(coord[i]);
+        //     }
+        //     return featureCollection;
+        // }
+
+
+
+    </script>
+</body>
+
+</html>
