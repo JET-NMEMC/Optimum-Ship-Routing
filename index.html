@@ -17,13 +17,85 @@
     <div id="map" class="map"></div>
     <button onclick="main()">run</button>
 
-    <script src="OSR.js"></script>
+    <!-- <script src="OSR.js"></script> -->
     <script src="leaflet.mapCorrection.js"></script>
     <script src="BaseMap.js"></script>
     <script>
+        var Vessel = { Vmax: 30, Vmin: 30, Vmid: 20 };
+
+        // 目标函数2：计算路径的总航时
+        function calculateTotalTime(route) {
+            let totalTime = 0;
+            for (let i = 0; i < route.length - 1; i++) {
+                const lat1 = route[i][0];
+                const lon1 = route[i][1];
+                const lat2 = route[i + 1][0];
+                const lon2 = route[i + 1][1];
+                let Flow = getFlow('2011-01-01 00:00', [37, 123]);
+                let bearing = getBearing(lat1, lon1, lat2, lon2);
+                const Vboat = calcVboat(Vessel.Vmid, null, Flow.Vcurrent, Flow.Dcurrent, null, bearing);
+                totalTime = totalTime + calculateDistance(lat1, lon1, lat2, lon2) / Vboat;
+            }
+            return totalTime;
+        }
+        function getBearing(lat1, lon1, lat2, lon2) {
+            let distance_North = 6371 * (lat2 - lat1);
+            let distance_East = 6371 * Math.cos(lat1) * (lon2 - lon1);
+            let bearing = Math.atan2(distance_East, distance_North) * 180 / Math.PI;
+            if (bearing < 0) { bearing += 360; };
+            console.log("航向");
+            console.log(bearing);
+            return bearing
+        }
+
+        // getBearing(37, 120, 37, 112)
+
+        function calcVboat(Vt, Dt, Vf, Df, Vc, Dc) {
+            // var Vt, Dt //船首
+            // var Vf, Df //水流
+            // var Vc, Dc //航迹
+            // Vt = 10.00, Dt = null;//船首
+            // Vf = 5.00, Df = 180;//水流
+            // Vc = null, Dc = 90;//航迹
+            var A = angle_btw_2_Dir(Df, Dc).rad;
+            // console.log("水流与航迹夹角", angle_btw_2_Dir(Df, Dc).angle);
+            // console.log("水流与航迹夹角", A);
+            if (A == 0) {
+                return Vt + Vf
+            } else {
+                sinA = Math.sin(A);
+                cosA = Math.cos(A);
+                sinB = (Vf * sinA) / Vt;
+                cosB = Math.sqrt(1 - sinB * sinB);
+                sinC = sinA * cosB + cosA * sinB;
+                Vc = Vt * sinC / sinA;
+                return Vc
+            }
+        }
+        function angle_btw_2_Dir(a, b) {
+            let cha = Math.max(a, b) - Math.min(a, b);
+            if (cha > 180) {
+                cha = 360 - cha
+            }
+            return {
+                angle: cha,
+                rad: Math.PI * cha / 180
+            }
+        }
+        function getFlow(time, location) {
+            let Vcurrent = 0.1 * Math.random();
+            // let Dcurrent = 30 * Math.random();
+            let Dcurrent = 0;
+            return {
+                Vcurrent: Number(Vcurrent.toFixed(5)),
+                Dcurrent: Number(Dcurrent.toFixed(5))
+            }
+        }
+        // console.log(getFlow('2011-01-01 00:00', [37, 123]))
 
 
-        // 目标函数：计算路径的总航程
+
+        // 目标函数1：计算路径的总航程
         function calculateTotalDistance(route) {
             let totalDistance = 0;
             for (let i = 0; i < route.length - 1; i++) {
@@ -35,6 +107,7 @@
             }
             return totalDistance;
         }
+
         // 计算两个经纬度之间的大圆距离（单位：千米）
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; // 地球半径
@@ -54,6 +127,10 @@
         function deg2rad(deg) {
             return deg * (Math.PI / 180);
         }
+        // 将弧度转换为角度
+        function rad2deg(radian) {
+            return radian * 180 / Math.PI;
+        }
 
 
         // 随机扰动
@@ -64,7 +141,7 @@
             var lng = newSolution[index1][1];
             // var newlat = lat + (Math.random() * 2 - 1) * (temperature / initialTemperature) * 2;
             var newlat = lat + (Math.random() * 2 - 1) * 0.1;
-            // var newlng = lng + (Math.random() * 2 - 1) * 0.1;
+            var newlng = lng + (Math.random() * 2 - 1) * 0.1;
             var newlng = lng;
             newSolution[index1] = [newlat, newlng];
             return newSolution
@@ -74,7 +151,7 @@
         //最小温度和停止温度，以及迭代次数
         function simulatedAnnealing(initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations) {
             let currentSolution = initialSolution;
-            let currentDistance = calculateTotalDistance(currentSolution);
+            let currentDistance = calculateTotalTime(currentSolution);
             let bestSolution = currentSolution;
             let bestDistance = currentDistance;
             let temperature = initialTemperature;
@@ -83,7 +160,8 @@
             while (temperature > stoppingTemperature) {
                 // while (temperature > stoppingTemperature && i < iterations) {
                 const newSolution = newS(currentSolution, temperature);
-                const newDistance = calculateTotalDistance(newSolution);
+                // const newDistance = calculateTotalDistance(newSolution);
+                const newDistance = calculateTotalTime(newSolution);
                 const delta = newDistance - currentDistance;
                 if (delta < 0 || Math.exp(-delta / temperature) > Math.random()) {
                     currentSolution = newSolution;
@@ -125,15 +203,71 @@
 
         function main() {
             const optimizedSolution = simulatedAnnealing(initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations);
-            console.log("初始解:", initialSolution);
             console.log("优化后迭代次数:", optimizedSolution.times);
-            console.log("优化后的解:", optimizedSolution.bestSolution);
             console.log("优化后的总航程:", calculateTotalDistance(optimizedSolution.bestSolution));
-
+            // console.log("初始解:", initialSolution);
+            console.log("优化后的解:", optimizedSolution.bestSolution);
 
             var polyline1 = L.polyline(optimizedSolution.bestSolution, { color: 'yellow' }).addTo(map);
-            // zoom the map to the polyline
             map.fitBounds(polyline0.getBounds());
+        }
+
+        var CircleRoute = greatCircleRoute([30.9801, 121.8434], [35.0497, -121], 10);
+        console.log(CircleRoute);
+        var polyline3 = L.polyline(CircleRoute, { color: 'white' }).addTo(map);
+        // 判断两点是否跨过东经180度
+        function isCross180(P1, P2) {
+            // 如果两点的经度差大于180度，说明跨过了
+            return Math.abs(P1[1] - P2[1]) > 180;
+        }
+
+
+
+        //根据起点和重点坐标，生成大圆路径
+        function greatCircleRoute(P1, P2, segments) {
+            // Initialize an empty array to store the coordinates
+            let route = [];
+            let Cross180 = isCross180(P1, P2);
+            console.log(Cross180);
+            // Loop through each segment and calculate the coordinates
+            for (let i = 0; i <= segments; i++) {
+                // Calculate the fraction of the segment
+                let fraction = i / segments;
+                // Convert coordinates to radians
+                let lat1_rad = P1[0] * Math.PI / 180;
+                let lon1_rad = P1[1] * Math.PI / 180;
+                let lat2_rad = P2[0] * Math.PI / 180;
+                let lon2_rad = P2[1] * Math.PI / 180;
+                // Calculate the central angle between the two points
+                let angle = Math.acos(Math.sin(lat1_rad) * Math.sin(lat2_rad) +
+                    Math.cos(lat1_rad) * Math.cos(lat2_rad) * Math.cos(lon1_rad -
+                        lon2_rad));
+                // Apply the spherical interpolation formula
+                let a = Math.sin((1 - fraction) * angle) / Math.sin(angle);
+                let b = Math.sin(fraction * angle) / Math.sin(angle);
+                let x = a * Math.cos(lat1_rad) * Math.cos(lon1_rad) + b * Math.cos(lat2_rad) * Math.cos(lon2_rad);
+                let y = a * Math.cos(lat1_rad) * Math.sin(lon1_rad) + b * Math.cos(lat2_rad) * Math.sin(lon2_rad);
+                let z = a * Math.sin(lat1_rad) + b * (Math.sin(lat2_rad));
+                // Convert back to degrees
+                let lat3_degrees = (Math.atan(z / (Math.sqrt(x ** 2 + y ** 2)))) / (Math.PI / (180));
+                if (x > 0) {
+                    var long3_degrees = (Math.atan(y / x)) / (Math.PI / (180));
+                }
+                else if (y > 0) {
+                    var long3_degrees = ((Math.atan(y / x)) + (Math.PI)) / (Math.PI / (180));
+                }
+                else {
+                    var long3_degrees = ((Math.atan(y / x)) - (Math.PI)) / (Math.PI / (180));
+                }
+                //如果跨过东经180，负经度加360，为了画图
+                if (Cross180 && long3_degrees < 0) { long3_degrees += 360 };
+                // Create a point object with the coordinates
+                let point = [lat3_degrees, long3_degrees];
+                // Push the point to the route array
+                route.push(point);
+            }
+            // route[0] = P1; route[route.length - 1] = P2;
+            return route;
         }
 
 
@@ -156,9 +290,6 @@
         //     }
         //     return featureCollection;
         // }
-
-
-
     </script>
 </body>
 
