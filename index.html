@@ -82,7 +82,7 @@
                 rad: Math.PI * cha / 180
             }
         }
-        
+
         function getFlow(time, location) {
             // let Vcurrent = 5 * Math.random();
             let Vcurrent = 5;
@@ -153,6 +153,7 @@
         //最小温度和停止温度，以及迭代次数
         function simulatedAnnealing(initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations) {
             let currentSolution = initialSolution;
+            let initialDistance = calculateTotalTime(initialSolution);
             let currentDistance = calculateTotalTime(currentSolution);
             let bestSolution = currentSolution;
             let bestDistance = currentDistance;
@@ -180,8 +181,10 @@
                 // }
             }
             return {
+                times: i,
                 bestSolution: bestSolution,
-                times: i
+                bestDistance: bestDistance,
+                initialDistance: initialDistance,
             };
         }
 
@@ -216,23 +219,25 @@
         function main() {
             const optimizedSolution = simulatedAnnealing(initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations);
             console.log("优化后迭代次数:", optimizedSolution.times);
-            console.log("优化后的总航程:", calculateTotalDistance(optimizedSolution.bestSolution));
+            console.log("优化前的目标函数值:", optimizedSolution.initialDistance);
+            console.log("优化后的目标函数值:", optimizedSolution.bestDistance);
             // console.log("初始解:", initialSolution);
-            console.log("优化后的解:", optimizedSolution.bestSolution);
+            // console.log("优化后的解:", optimizedSolution.bestSolution);
 
             var polyline1 = L.polyline(optimizedSolution.bestSolution, { color: 'yellow' }).addTo(map);
             map.fitBounds(polyline0.getBounds());
         }
 
-        var CircleRoute = greatCircleRoute([30.9801, 121.8434], [35.0497, -121], 10);
-        console.log(CircleRoute);
-        var polyline3 = L.polyline(CircleRoute, { color: 'white' }).addTo(map);
+        // var CircleRoute = greatCircleRoute([30.9801, 121.8434], [35.0497, -121], 10);
+        // console.log(CircleRoute);
+        // var polyline3 = L.polyline(CircleRoute, { color: 'white' }).addTo(map);
+
+
         // 判断两点是否跨过东经180度
         function isCross180(P1, P2) {
             // 如果两点的经度差大于180度，说明跨过了
             return Math.abs(P1[1] - P2[1]) > 180;
         }
-
 
 
         //根据起点和重点坐标，生成大圆路径
