@@ -38,18 +38,28 @@
             }
             return totalTime;
         }
+        //获取潮流，根据时间和位置
+        // console.log(getFlow('2011-01-01 00:00', [37, 123]))
+        function getFlow(time, location) {
+            // let Vcurrent = 5 * Math.random();
+            let Vcurrent = 5;
+            // let Dcurrent = 30 * Math.random();
+            let Dcurrent = 90;
+            return {
+                Vcurrent: Number(Vcurrent.toFixed(5)),
+                Dcurrent: Number(Dcurrent.toFixed(5))
+            }
+        }
+        //获取航向角，根据当前坐标和目标坐标
+        // console.log("航向" + getBearing(37, 120, 37, 112));
         function getBearing(lat1, lon1, lat2, lon2) {
             let distance_North = 6371 * (lat2 - lat1);
             let distance_East = 6371 * Math.cos(lat1) * (lon2 - lon1);
             let bearing = Math.atan2(distance_East, distance_North) * 180 / Math.PI;
             if (bearing < 0) { bearing += 360; };
-            // console.log("航向");
-            // console.log(bearing);
             return bearing
         }
-
-        // getBearing(37, 120, 37, 112)
-
+        //获取船的实际航速
         function calcVboat(Vt, Dt, Vf, Df, Vc, Dc) {
             // var Vt, Dt //船首
             // var Vf, Df //水流
@@ -73,28 +83,13 @@
             }
         }
         function angle_btw_2_Dir(a, b) {
-            let cha = Math.max(a, b) - Math.min(a, b);
-            if (cha > 180) {
-                cha = 360 - cha
-            }
+            let angle = Math.max(a, b) - Math.min(a, b);
+            if (angle > 180) { angle = 360 - angle }
             return {
-                angle: cha,
-                rad: Math.PI * cha / 180
+                angle: angle,
+                rad: Math.PI * angle / 180
             }
         }
-
-        function getFlow(time, location) {
-            // let Vcurrent = 5 * Math.random();
-            let Vcurrent = 5;
-            // let Dcurrent = 30 * Math.random();
-            let Dcurrent = 90;
-            return {
-                Vcurrent: Number(Vcurrent.toFixed(5)),
-                Dcurrent: Number(Dcurrent.toFixed(5))
-            }
-        }
-        // console.log(getFlow('2011-01-01 00:00', [37, 123]))
-
 
 
         // 目标函数1：计算路径的总航程
@@ -136,55 +131,60 @@
 
 
         // 随机扰动
-        function newS(currentSolution, temperature) {
+        function randomDisturbance(currentSolution, temperature, initialTemperature) {
             const newSolution = currentSolution.slice();
             const index1 = Math.floor(Math.random() * (newSolution.length - 2)) + 1;
             var lat = newSolution[index1][0];
             var lng = newSolution[index1][1];
-            // var newlat = lat + (Math.random() * 2 - 1) * (temperature / initialTemperature) * 2;
-            var newlat = lat + (Math.random() * 2 - 1) * 0.1;
-            var newlng = lng + (Math.random() * 2 - 1) * 0.1;
-            var newlng = lng;
+            // var newlat = lat + (Math.random() * 2 - 1) * (temperature / initialTemperature) * 0.1;
+            // var newlng = lng + (Math.random() * 2 - 1) * (temperature / initialTemperature) * 0.1;
+            var ttt = 0.01;
+            var newlat = lat + (Math.random() * 2 - 1) * ttt;
+            var newlng = lng + (Math.random() * 2 - 1) * ttt;
+            // while (((newlat - lat) ** 2 + (newlng - lng) ** 2) > ((newlat - newSolution[index1 - 1][0]) ** 2 + (newlng - newSolution[index1 - 1][1]) ** 2)) {
+            //     newlat = lat + (Math.random() * 2 - 1) * ttt;
+            //     newlng = lng + (Math.random() * 2 - 1) * ttt;
+            // }
+            // var newlng = lng;
             newSolution[index1] = [newlat, newlng];
             return newSolution
         }
 
+
         // 模拟退火算法
         //最小温度和停止温度，以及迭代次数
-        function simulatedAnnealing(initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations) {
+        function simulatedAnnealing(targetFunction, initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations) {
+            let initialResult = targetFunction(initialSolution);
             let currentSolution = initialSolution;
-            let initialDistance = calculateTotalTime(initialSolution);
-            let currentDistance = calculateTotalTime(currentSolution);
+            let currentResult = targetFunction(currentSolution);
             let bestSolution = currentSolution;
-            let bestDistance = currentDistance;
+            let bestResult = currentResult;
+
             let temperature = initialTemperature;
             let i = 0;
 
             while (temperature > stoppingTemperature) {
                 // while (temperature > stoppingTemperature && i < iterations) {
-                const newSolution = newS(currentSolution, temperature);
-                // const newDistance = calculateTotalDistance(newSolution);
-                const newDistance = calculateTotalTime(newSolution);
-                const delta = newDistance - currentDistance;
+                const newSolution = randomDisturbance(currentSolution, temperature, initialTemperature);
+                const newDistance = targetFunction(newSolution);
+                const delta = newDistance - currentResult;
                 if (delta < 0 || Math.exp(-delta / temperature) > Math.random()) {
                     currentSolution = newSolution;
-                    currentDistance = newDistance;
-                    if (currentDistance < bestDistance) {
+                    currentResult = newDistance;
+                    if (currentResult < bestResult) {
                         bestSolution = currentSolution;
-                        bestDistance = currentDistance;
+                        bestResult = currentResult;
                     }
                 }
                 temperature *= coolingRate;
                 i++;
-                // if (temperature < minTemperature) {
-                //     temperature = initialTemperature;
-                // }
+                // if (temperature < minTemperature) { temperature = initialTemperature }
             }
             return {
                 times: i,
                 bestSolution: bestSolution,
-                bestDistance: bestDistance,
-                initialDistance: initialDistance,
+                bestResult: bestResult,
+                initialResult: initialResult,
             };
         }
 
@@ -199,53 +199,43 @@
         //     [42.17857915710922, 220.41807385318646],
         //     [35.04976299214142, 239.01294591367804]
         // ];
-        const initialSolution = [
-            [30.98013959225812, 121.84345224906326],
-            [42.298910329477835, 139.98294345272953],
-            [48.26496251863264, 156.83711720029146],
-            [50.8861450564919, 172.65686961196872],
-            [51.30115460424353, 186.75115157735843],
-            [49.211378321873035, 205.38160120540778],
-            [44.89284575798574, 220.41807385318646],
-            [35.04976299214142, 239.01294591367804],
-        ]
-        var polyline0 = L.polyline(initialSolution, { color: 'red' }).addTo(map);
+        // const initialSolution = greatCircleRoute([30.9801, 121.8434], [35.0497, -120], 10);
+        // const initialSolution = greatCircleRoute([31.35555029, 122.045141274], [-3.48801587, 144.384664086], 10);
+        const initialSolution = greatCircleRoute([31.35555029, 122.045141274], [34.16245221, 125.802463348], 10);
+
+        var polyline0 = L.polyline(initialSolution, { color: 'red', weight: 1 }).addTo(map);
+        map.fitBounds(polyline0.getBounds());
         const initialTemperature = 1000;
         const coolingRate = 0.9999;
         const minTemperature = 1;
         const stoppingTemperature = 0.01;
-        const iterations = 10000000;
+        const iterations = 1000000;
 
         function main() {
-            const optimizedSolution = simulatedAnnealing(initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations);
+            const optimizedSolution = simulatedAnnealing(calculateTotalTime, initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations);
             console.log("优化后迭代次数:", optimizedSolution.times);
-            console.log("优化前的目标函数值:", optimizedSolution.initialDistance);
-            console.log("优化后的目标函数值:", optimizedSolution.bestDistance);
+            console.log("优化前的目标函数值:", optimizedSolution.initialResult.toFixed(4));
+            console.log("优化后的目标函数值:", optimizedSolution.bestResult.toFixed(4));
             // console.log("初始解:", initialSolution);
             // console.log("优化后的解:", optimizedSolution.bestSolution);
 
-            var polyline1 = L.polyline(optimizedSolution.bestSolution, { color: 'yellow' }).addTo(map);
-            map.fitBounds(polyline0.getBounds());
+            var polyline1 = L.polyline(optimizedSolution.bestSolution, { color: 'yellow', weight: 1 }).addTo(map);
+            map.fitBounds(polyline1.getBounds());
         }
 
-        // var CircleRoute = greatCircleRoute([30.9801, 121.8434], [35.0497, -121], 10);
-        // console.log(CircleRoute);
+        // var CircleRoute = greatCircleRoute([30.9801, 121.8434], [35.0497, -120], 20);
+        // // console.log(CircleRoute);
         // var polyline3 = L.polyline(CircleRoute, { color: 'white' }).addTo(map);
 
 
-        // 判断两点是否跨过东经180度
-        function isCross180(P1, P2) {
-            // 如果两点的经度差大于180度，说明跨过了
-            return Math.abs(P1[1] - P2[1]) > 180;
-        }
+
 
 
         //根据起点和重点坐标，生成大圆路径
         function greatCircleRoute(P1, P2, segments) {
-            // Initialize an empty array to store the coordinates
-            let route = [];
             let Cross180 = isCross180(P1, P2);
-            console.log(Cross180);
+            console.log("线路" + Cross180);
+            let route = [];
             // Loop through each segment and calculate the coordinates
             for (let i = 0; i <= segments; i++) {
                 // Calculate the fraction of the segment
@@ -267,24 +257,36 @@
                 let z = a * Math.sin(lat1_rad) + b * (Math.sin(lat2_rad));
                 // Convert back to degrees
                 let lat3_degrees = (Math.atan(z / (Math.sqrt(x ** 2 + y ** 2)))) / (Math.PI / (180));
-                if (x > 0) {
-                    var long3_degrees = (Math.atan(y / x)) / (Math.PI / (180));
-                }
-                else if (y > 0) {
-                    var long3_degrees = ((Math.atan(y / x)) + (Math.PI)) / (Math.PI / (180));
-                }
-                else {
-                    var long3_degrees = ((Math.atan(y / x)) - (Math.PI)) / (Math.PI / (180));
-                }
+                // var long3_degrees;
+                // if (x > 0) { long3_degrees = (Math.atan(y / x)) / (Math.PI / (180)) }
+                // else if (y > 0) { long3_degrees = ((Math.atan(y / x)) + (Math.PI)) / (Math.PI / (180)) }
+                // else { long3_degrees = ((Math.atan(y / x)) - (Math.PI)) / (Math.PI / (180)) }
+                var long3_degrees =
+                    (x > 0) ? (Math.atan(y / x)) / (Math.PI / (180)) :
+                        (y > 0) ? ((Math.atan(y / x)) + (Math.PI)) / (Math.PI / (180)) :
+                            ((Math.atan(y / x)) - (Math.PI)) / (Math.PI / (180));
                 //如果跨过东经180，负经度加360，为了画图
-                if (Cross180 && long3_degrees < 0) { long3_degrees += 360 };
-                // Create a point object with the coordinates
+                // if (Cross180 && long3_degrees < 0) { long3_degrees += 360 };
+
+                // if (Cross180 == "Cross IDL west2east" && long3_degrees < 0) { long3_degrees += 360 }
+                if (Cross180 !== "normal" && long3_degrees < 0) { long3_degrees += 360 }
                 let point = [lat3_degrees, long3_degrees];
-                // Push the point to the route array
                 route.push(point);
             }
             // route[0] = P1; route[route.length - 1] = P2;
+            console.log(route)
             return route;
+
+        }
+        // 判断两点是否穿过180°E国际换日线,如果两点的经度差大于180度，说明跨过了
+        function isCross180(P1, P2) {
+            let cross = Math.abs(P1[1] - P2[1]) > 180;
+            let w2e = (P1[1] - P2[1]) > 0;
+            if (cross) {
+                if (w2e) { return "Cross IDL west2east" } else { return "Cross IDL east2west" }
+            } else {
+                return "normal"
+            }
         }
 
 
