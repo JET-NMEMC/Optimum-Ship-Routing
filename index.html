@@ -34,7 +34,7 @@
                 let Flow = getFlow('2011-01-01 00:00', [37, 123]);
                 let bearing = getBearing(lat1, lon1, lat2, lon2);
                 const Vboat = calcVboat(Vessel.Vmid, null, Flow.Vcurrent, Flow.Dcurrent, null, bearing);
-                totalTime = totalTime + calculateDistance(lat1, lon1, lat2, lon2) / Vboat;
+                totalTime = totalTime + rhumbDistance(lat1, lon1, lat2, lon2) / Vboat;
             }
             return totalTime;
         }
@@ -93,41 +93,63 @@
 
 
         // 目标函数1：计算路径的总航程
-        function calculateTotalDistance(route) {
+        function TotalDistance(route) {
             let totalDistance = 0;
             for (let i = 0; i < route.length - 1; i++) {
                 const lat1 = route[i][0];
                 const lon1 = route[i][1];
                 const lat2 = route[i + 1][0];
                 const lon2 = route[i + 1][1];
-                totalDistance += calculateDistance(lat1, lon1, lat2, lon2);
+                totalDistance += bigCircleDistance(lat1, lon1, lat2, lon2);
             }
             return totalDistance;
         }
 
         // 计算两个经纬度之间的大圆距离（单位：千米）
-        function calculateDistance(lat1, lon1, lat2, lon2) {
+        function bigCircleDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; // 地球半径
-            const dLat = deg2rad(lat2 - lat1);
-            const dLon = deg2rad(lon2 - lon1);
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            let dLon = (lon2 - lon1) * Math.PI / 180;
+            // 处理跨越180度经线的情况
+            if (dLon > Math.PI) {
+                dLon = -(2 * Math.PI - dLon);
+            } else if (dLon < -Math.PI) {
+                dLon = 2 * Math.PI + dLon;
+            }
             const a =
                 Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(deg2rad(lat1)) *
-                Math.cos(deg2rad(lat2)) *
+                Math.cos(lat1 * Math.PI / 180) *
+                Math.cos(lat2 * Math.PI / 180) *
                 Math.sin(dLon / 2) *
                 Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = R * c;
             return distance;
         }
-        // 将角度转换为弧度
-        function deg2rad(deg) {
-            return deg * (Math.PI / 180);
+
+        // console.log(bigCircleDistance(31.35, 122.04, 34.16, -125.80))
+        // console.log(rhumbDistance(31.35, 122.04, 34.16, -125.80))
+        //计算两个经纬度之间的恒向距离（单位：千米）
+        function rhumbDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // 地球半径（米）
+            const φ1 = lat1 * Math.PI / 180; // 起点纬度，转换为弧度
+            const φ2 = lat2 * Math.PI / 180; // 终点纬度，转换为弧度
+            let Δλ = (lon2 - lon1) * Math.PI / 180; // 经度差，转换为弧度
+
+            // 计算航向角（以弧度表示）
+            const y = Math.log(Math.tan(φ2 / 2 + Math.PI / 4) / Math.tan(φ1 / 2 + Math.PI / 4));
+            const x = Math.abs(Δλ) > Math.PI ? (Δλ > 0 ? -2 * Math.PI + Δλ : 2 * Math.PI + Δλ) : Δλ;
+            const θ = Math.atan2(x, y);
+
+            // 计算航向距离
+            const distance = Math.sqrt(x * x + y * y) * R;
+
+            return distance;
         }
-        // 将弧度转换为角度
-        function rad2deg(radian) {
-            return radian * 180 / Math.PI;
-        }
+
+
+
+
 
 
         // 随机扰动
@@ -138,7 +160,7 @@
             var lng = newSolution[index1][1];
             // var newlat = lat + (Math.random() * 2 - 1) * (temperature / initialTemperature) * 0.1;
             // var newlng = lng + (Math.random() * 2 - 1) * (temperature / initialTemperature) * 0.1;
-            var ttt = 0.01;
+            var ttt = 0.1;
             var newlat = lat + (Math.random() * 2 - 1) * ttt;
             var newlng = lng + (Math.random() * 2 - 1) * ttt;
             // while (((newlat - lat) ** 2 + (newlng - lng) ** 2) > ((newlat - newSolution[index1 - 1][0]) ** 2 + (newlng - newSolution[index1 - 1][1]) ** 2)) {
@@ -199,9 +221,35 @@
         //     [42.17857915710922, 220.41807385318646],
         //     [35.04976299214142, 239.01294591367804]
         // ];
+        // const initialSolution = [
+        //     [31.35000000000001, 122.03999999999999],
+        //     [36.76002391794339, 130.50876463684517],
+        //     [41.48, 140.17],
+        //     [45.280373054616774, 151.19341506133708],
+        //     [47.883340170798064, 163.52241310893785],
+        //     [49.0, 176.7],
+        //     [48.56617823593327, 190.237732524661],
+        //     [46.46320398236874, 203.1063554099457],
+        //     [43.53700647790604, 214.81324319255498],
+        //     [39.24981520536509, 225.1530650308644],
+        //     [34.16, 234.20000000000002]
+        // ]
+        const initialSolution = [
+            [31.35000000000001, 122.03999999999999],
+            [31.569561752092028, 131.44023623153393],
+            [31.79127714224013, 139.83032445402617],
+            [32.015812212717925, 148.37459794877023],
+            [32.55257607033626, 169.19757521610768],
+            [32.692862094126696, 175.03317457460213],
+            [33.27564888856016, 198.84234096101494],
+            [33.428614721288575, 205.2548275104859],
+            [33.67288249140154, 215.13685326556853],
+            [33.966016145771604, 226.14872463889967],
+            [34.16, 234.20000000000002],]
+
         // const initialSolution = greatCircleRoute([30.9801, 121.8434], [35.0497, -120], 10);
         // const initialSolution = greatCircleRoute([31.35555029, 122.045141274], [-3.48801587, 144.384664086], 10);
-        const initialSolution = greatCircleRoute([31.35555029, 122.045141274], [34.16245221, 125.802463348], 10);
+        // const initialSolution = greatCircleRoute([31.35, 122.04], [34.16, -125.80], 10);
 
         var polyline0 = L.polyline(initialSolution, { color: 'red', weight: 1 }).addTo(map);
         map.fitBounds(polyline0.getBounds());
@@ -212,7 +260,8 @@
         const iterations = 1000000;
 
         function main() {
-            const optimizedSolution = simulatedAnnealing(calculateTotalTime, initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations);
+            // const optimizedSolution = simulatedAnnealing(calculateTotalTime, initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations);
+            const optimizedSolution = simulatedAnnealing(TotalDistance, initialSolution, initialTemperature, coolingRate, minTemperature, stoppingTemperature, iterations);
             console.log("优化后迭代次数:", optimizedSolution.times);
             console.log("优化前的目标函数值:", optimizedSolution.initialResult.toFixed(4));
             console.log("优化后的目标函数值:", optimizedSolution.bestResult.toFixed(4));
@@ -257,18 +306,11 @@
                 let z = a * Math.sin(lat1_rad) + b * (Math.sin(lat2_rad));
                 // Convert back to degrees
                 let lat3_degrees = (Math.atan(z / (Math.sqrt(x ** 2 + y ** 2)))) / (Math.PI / (180));
-                // var long3_degrees;
-                // if (x > 0) { long3_degrees = (Math.atan(y / x)) / (Math.PI / (180)) }
-                // else if (y > 0) { long3_degrees = ((Math.atan(y / x)) + (Math.PI)) / (Math.PI / (180)) }
-                // else { long3_degrees = ((Math.atan(y / x)) - (Math.PI)) / (Math.PI / (180)) }
                 var long3_degrees =
                     (x > 0) ? (Math.atan(y / x)) / (Math.PI / (180)) :
                         (y > 0) ? ((Math.atan(y / x)) + (Math.PI)) / (Math.PI / (180)) :
                             ((Math.atan(y / x)) - (Math.PI)) / (Math.PI / (180));
                 //如果跨过东经180，负经度加360，为了画图
-                // if (Cross180 && long3_degrees < 0) { long3_degrees += 360 };
-
-                // if (Cross180 == "Cross IDL west2east" && long3_degrees < 0) { long3_degrees += 360 }
                 if (Cross180 !== "normal" && long3_degrees < 0) { long3_degrees += 360 }
                 let point = [lat3_degrees, long3_degrees];
                 route.push(point);
