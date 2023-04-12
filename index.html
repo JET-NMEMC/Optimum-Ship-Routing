@@ -100,6 +100,7 @@
                 const lon1 = route[i][1];
                 const lat2 = route[i + 1][0];
                 const lon2 = route[i + 1][1];
+                // totalDistance += rhumbDistance(lat1, lon1, lat2, lon2);
                 totalDistance += bigCircleDistance(lat1, lon1, lat2, lon2);
             }
             return totalDistance;
@@ -127,8 +128,12 @@
             return distance;
         }
 
-        // console.log(bigCircleDistance(31.35, 122.04, 34.16, -125.80))
-        // console.log(rhumbDistance(31.35, 122.04, 34.16, -125.80))
+        // console.log(bigCircleDistance(30.778275438, 122.6953125,34.621355266, 240.1171875))
+        // console.log(rhumbDistance(30.778275438, 122.6953125,34.621355266, 240.1171875))
+        // console.log(bigCircleDistance(38.908607702, 117.850031342, 38.720357622, 121.145016677))
+        // console.log(rhumbDistance(38.908607702, 117.850031342, 38.720357622, 121.145016677))
+
+
         //计算两个经纬度之间的恒向距离（单位：千米）
         function rhumbDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; // 地球半径（米）
@@ -235,18 +240,43 @@
         //     [34.16, 234.20000000000002]
         // ]
         const initialSolution = [
-            [31.35000000000001, 122.03999999999999],
-            [31.569561752092028, 131.44023623153393],
-            [31.79127714224013, 139.83032445402617],
-            [32.015812212717925, 148.37459794877023],
-            [32.55257607033626, 169.19757521610768],
-            [32.692862094126696, 175.03317457460213],
-            [33.27564888856016, 198.84234096101494],
-            [33.428614721288575, 205.2548275104859],
-            [33.67288249140154, 215.13685326556853],
-            [33.966016145771604, 226.14872463889967],
-            [34.16, 234.20000000000002],]
+            //     [31.35000000000001, 122.03999999999999],
+            //     [31.569561752092028, 131.44023623153393],
+            //     [31.79127714224013, 139.83032445402617],
+            //     [32.015812212717925, 148.37459794877023],
+            //     [32.55257607033626, 169.19757521610768],
+            //     [32.692862094126696, 175.03317457460213],
+            //     [33.27564888856016, 198.84234096101494],
+            //     [33.428614721288575, 205.2548275104859],
+            //     [33.67288249140154, 215.13685326556853],
+            //     [33.966016145771604, 226.14872463889967],
+            //     [34.16, 234.20000000000002],]
 
+
+            [30.778275438, 122.6953125],
+            [35.770015749, 136.0546875],
+            [39.930287608, 148.53515625],
+            [39.660280999, 161.54296875],
+            [40.46711653, 178.59375],
+            [40.333307875, 190.72265625],
+            [39.930287608, 208.30078125],
+            [38.843914905, 215.15625],
+            [37.182819903, 226.7578125],
+            [35.770015749, 233.7890625],
+            [34.621355266, 240.1171875],
+
+            // [32.576574198, 121.145023911],
+            // [32.807627925, 122.550999327],
+            // [32.844540982, 123.781227815],
+            // [32.872215704, 124.901614474],
+            // [32.742993176, 126.329558256],
+            // [32.585827822, 127.713565305],
+            // [32.419116586, 129.053635623],
+            // [32.419116586, 130.031227905],
+
+        ]
+
+        // console.log('chushi', TotalDistance(initialSolution))
         // const initialSolution = greatCircleRoute([30.9801, 121.8434], [35.0497, -120], 10);
         // const initialSolution = greatCircleRoute([31.35555029, 122.045141274], [-3.48801587, 144.384664086], 10);
         // const initialSolution = greatCircleRoute([31.35, 122.04], [34.16, -125.80], 10);
@@ -351,6 +381,95 @@
         //     }
         //     return featureCollection;
         // }
+
+        // // 定义目标函数
+        // function targetFunction(x) {
+        //     return x[0] ** 2 + x[1] ** 2;
+        // }
+
+        // // 定义粒子群类
+        // class ParticleSwarmOptimizer {
+        //     constructor(numParticles, numDimensions, lowerBounds, upperBounds) {
+        //         this.numParticles = numParticles; // 粒子数量
+        //         this.numDimensions = numDimensions; // 粒子维度
+        //         this.lowerBounds = lowerBounds; // 粒子坐标下限
+        //         this.upperBounds = upperBounds; // 粒子坐标上限
+        //         this.particles = []; // 粒子数组
+        //         this.globalBestPosition = []; // 全局最优解
+        //         this.globalBestValue = Infinity; // 全局最优解的函数值
+        //         this.c1 = 2; // 加速常数1
+        //         this.c2 = 2; // 加速常数2
+        //         this.w = 0.5; // 惯性因子
+        //         this.initParticles(); // 初始化粒子
+        //     }
+
+        //     // 初始化粒子
+        //     initParticles() {
+        //         for (let i = 0; i < this.numParticles; i++) {
+        //             let particle = {
+        //                 position: [], // 粒子位置
+        //                 velocity: [], // 粒子速度
+        //                 personalBestPosition: [], // 粒子个体最优解
+        //                 personalBestValue: Infinity // 粒子个体最优解的函数值
+        //             };
+        //             for (let j = 0; j < this.numDimensions; j++) {
+        //                 particle.position.push(Math.random() * (this.upperBounds[j] - this.lowerBounds[j]) + this.lowerBounds[j]);
+        //                 particle.velocity.push(0);
+        //             }
+        //             particle.personalBestPosition = particle.position.slice();
+        //             particle.personalBestValue = targetFunction(particle.position);
+        //             if (particle.personalBestValue < this.globalBestValue) {
+        //                 this.globalBestPosition = particle.personalBestPosition.slice();
+        //                 this.globalBestValue = particle.personalBestValue;
+        //             }
+        //             this.particles.push(particle);
+        //         }
+        //     }
+
+        //     // 更新粒子位置和速度
+        //     update() {
+        //         for (let i = 0; i < this.numParticles; i++) {
+        //             let particle = this.particles[i];
+        //             for (let j = 0; j < this.numDimensions; j++) {
+        //                 let r1 = Math.random();
+        //                 let r2 = Math.random();
+        //                 particle.velocity[j] = this.w * particle.velocity[j] + this.c1 * r1 * (particle.personalBestPosition[j] - particle.position[j]) + this.c2 * r2 * (this.globalBestPosition[j] - particle.position[j]);
+        //                 particle.position[j] += particle.velocity[j];
+        //                 if (particle.position[j] < this.lowerBounds[j]) {
+        //                     particle.position[j] = this.lowerBounds[j];
+        //                     particle.velocity[j] = 0;
+        //                 }
+        //                 if (particle.position[j] > this.upperBounds[j]) {
+        //                     particle.position[j] = this.upperBounds[j];
+        //                     particle.velocity[j] = 0;
+        //                 }
+        //             }
+        //             let newValue = targetFunction(particle.position);
+        //             if (newValue < particle.personalBestValue) {
+        //                 particle.personalBestPosition = particle.position.slice();
+        //                 particle.personalBestValue = newValue;
+        //                 if (particle.personalBestValue < this.globalBestValue) {
+        //                     this.globalBestPosition = particle.personalBestPosition.slice();
+        //                     this.globalBestValue = particle.personalBestValue;
+        //                 }
+        //             }
+        //         }
+        //     }
+
+        //     // 运行粒子群算法
+        //     run(maxIterations) {
+        //         for (let i = 0; i < maxIterations; i++) {
+        //             this.update();
+        //         }
+        //         return this.globalBestPosition;
+        //     }
+        // }
+
+        // // 使用示例
+        // let optimizer = new ParticleSwarmOptimizer(30, 2, [-5, -5], [5, 5]); // 创建一个粒子群优化器
+        // let solution = optimizer.run(1000); // 运行1000次迭代
+        // console.log(solution); // 输出全局最优解
+
     </script>
 </body>
 
