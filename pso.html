@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimum Ship Routing</title>
+    <link rel="stylesheet" href="index.css" />
+    <script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"></script>
+</head>
+
+<body>
+    <div><canvas id="mycanvas" style="display: none;"></canvas></div>
+    <div id="map" class="map"></div>
+    <button onclick="main()">run</button>
+
+    <!-- <script src="OSR.js"></script> -->
+    <script src="leaflet.mapCorrection.js"></script>
+    <script src="BaseMap.js"></script>
+</body>
+<script>
+    function main() {
+        // 粒子群算法参数
+        const POPULATION_SIZE = 100; // 粒子群大小
+        const MAX_ITERATIONS = 100; // 最大迭代次数
+        const C1 = 1.49618; // 学习因子1
+        const C2 = 1.49618; // 学习因子2
+        const W_MAX = 0.9; // 最大惯性权重
+        const W_MIN = 0.4; // 最小惯性权重
+
+        // 坐标串，格式为[lat, lng]
+        const coords = [
+            [39.908, 116.397],
+            [39.904, 116.391],
+            [39.900, 116.384],
+            [39.900, 116.379],
+            [39.905, 116.376],
+            [39.907, 116.380],
+            [39.908, 116.389]
+        ];
+
+        // 计算两点间的距离
+        function distance(p1, p2) {
+            const latDiff = p1[0] - p2[0];
+            const lngDiff = p1[1] - p2[1];
+            return Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+        }
+
+        // 计算一条线的长度
+        function calculateLength(line) {
+            let length = 0;
+            for (let i = 0; i < line.length - 1; i++) {
+                length += distance(line[i], line[i + 1]);
+            }
+            return length;
+        }
+
+        // 初始化粒子群
+        function initParticles(coords) {
+            const particles = [];
+            for (let i = 0; i < POPULATION_SIZE; i++) {
+                const particle = {
+                    position: coords.slice().sort(() => Math.random() - 0.5), // 随机排列初始位置
+                    velocity: Array.from({ length: coords.length }, () => [0, 0]), // 初始速度为0
+                    personalBest: null // 初始个体最优解为null
+                };
+                particle.personalBest = particle.position.slice();
+                particles.push(particle);
+            }
+            return particles;
+        }
+
+        // 更新粒子位置和速度
+        function updateParticles(particles, globalBest) {
+            for (let i = 0; i < POPULATION_SIZE; i++) {
+                const particle = particles[i];
+                let w = W_MAX - iterations * ((W_MAX - W_MIN) / MAX_ITERATIONS);
+                for (let j = 0; j < particle.position.length; j++) {
+                    // 计算速度
+                    let r1 = Math.random();
+                    let r2 = Math.random();
+                    particle.velocity[j][0] = w * particle.velocity[j][0] +
+                        C1 * r1 * (particle.personalBest[j][0] - particle.position[j][0]) +
+                        C2 * r2 * (globalBest[j][0] - particle.position[j][0]);
+                    particle.velocity[j][1] = w * particle.velocity[j][1] +
+                        C1 * r1 * (particle.personalBest[j][1] - particle.position[j][1]) +
+                        C2 * r2 * (globalBest[j][1] - particle.position[j][1]);
+                    // 更新位置
+                    particle.position[j][0] += particle.velocity[j][0];
+                    particle.position[j][1] += particle.velocity[j][1];
+                }
+                // 计算个体最优解
+                const currentLength = calculateLength(particle.position);
+                const personalBestLength = calculateLength(particle.personalBest);
+                if (currentLength < personalBestLength) {
+                    particle.personalBest = particle.position.slice();
+                }
+            }
+        }
+
+        // 找到全局最优解
+        function findGlobalBest(particles) {
+            let globalBest = particles[0].personalBest;
+            for (let i = 1; i < POPULATION_SIZE; i++) {
+                const personalBestLength = calculateLength(particles[i].personalBest);
+                const globalBestLength = calculateLength(globalBest);
+                if (personalBestLength < globalBestLength) {
+                    globalBest = particles[i].personalBest.slice();
+                }
+            }
+            return globalBest;
+        }
+
+        // 粒子群算法求解
+        function pso(coords) {
+            let particles = initParticles(coords);
+            let globalBest = findGlobalBest(particles);
+            let iterations = 0; // 迭代次数
+            for (; iterations < MAX_ITERATIONS; iterations++) {
+                updateParticles(particles, globalBest, iterations);
+                globalBest = findGlobalBest(particles);
+            }
+            return globalBest;
+        }
+
+
+        // 执行粒子群算法
+        const shortestPath = pso(coords);
+        const shortestLength = calculateLength(shortestPath);
+
+        console.log("最短线路：", shortestPath);
+        console.log("最短线路长度：", shortestLength);
+
+
+    }
+</script>
+
+</html>
