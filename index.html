@@ -16,12 +16,34 @@
     <div><canvas id="mycanvas" style="display: none;"></canvas></div>
     <div id="map" class="map"></div>
     <button onclick="main()">run</button>
+    <button onclick="path()">path</button>
 
     <!-- <script src="OSR.js"></script> -->
     <script src="leaflet.mapCorrection.js"></script>
     <script src="BaseMap.js"></script>
+    <script src="Astar.js"></script>
     <script>
-        var Vessel = { Vmax: 30, Vmin: 30, Vmid: 20 };
+        function path() {
+            const grid = [
+                [1, 1, 1, 0, 0],
+                [1, 1, 0, 0, 0],
+                [0, 0, 0, 1, 1],
+                [0, 0, 0, 1, 1],
+                [0, 0, 0, 1, 1],
+            ];
+
+            // const startLatLng = [0, 0];
+            // const endLatLng = [51.50722, -0.12776];
+            const startLatLng = [40.71455, -74.00714];
+            const endLatLng = [51.50722, -0.12776];
+
+            const path = Astar(startLatLng, endLatLng, grid);
+
+            console.log(path);
+        }
+
+
+        var Vessel = { Vesselname: 'XINLONG', Vmax: 30, Vmin: 30, Vmid: 20 };
 
         // 目标函数2：计算路径的总航时
         function calculateTotalTime(route) {
