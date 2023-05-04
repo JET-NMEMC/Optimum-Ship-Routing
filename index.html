@@ -43,7 +43,17 @@
         }
 
 
-        var Vessel = { Vesselname: 'XINLONG', Vmax: 30, Vmin: 30, Vmid: 20 };
+        var Vessel = {
+            id: {
+                Vesselname: 'XINLONG',
+                Vmax: 20,
+                Vmin: 10,
+                Vmid: 1,
+                draft_full: 5,
+                draft_empty: 3,
+            },
+
+        };
 
         // 目标函数2：计算路径的总航时
         function calculateTotalTime(route) {
