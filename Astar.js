@@ -4,8 +4,8 @@ function Astar(startLatLng, endLatLng, grid) {
     const openSet = [];
     const closedSet = new Set();
     const cameFrom = new Map();
-    const gScore = new Map();
-    const fScore = new Map();
+    let gScore = new Map();
+    let fScore = new Map();
 
     gScore.set(start.toString(), 0);
     fScore.set(start.toString(), heuristic(start, end));
@@ -107,9 +107,9 @@ function latLngToGrid(latLng) {
     return [row, col];
 }
 
-function gridToLatLng(grid) {
-    const row = grid[0];
-    const col = grid[1];
+function gridToLatLng(gridRC) {
+    const row = gridRC[0];
+    const col = gridRC[1];
     const lat = 90 - row;
     const lng = col - 180;
     return [lat, lng];
